@@ -341,10 +341,11 @@ async function iniciarPedido(phoneNumber) {
   let message = '🛒 *Iniciar Pedido*\n\nPerfecto! Estos son nuestros productos:\n\n';
   
   productos.forEach((prod, index) => {
-    message += `${index + 1}. ${prod.nombre} - $${prod.precio.toFixed(2)}\n`;
+    const precio = prod.precio % 1 === 0 ? prod.precio : prod.precio.toFixed(2);
+    message += `${index + 1}. ${prod.nombre} - $${precio} MXN\n`;
   });
 
-  message += '\n📝 Escribe el *número* del producto que deseas ordenar.\n\n💡 También puedes escribir *cancelar* para salir.';
+  message += '\n📝 Escribe el(los) *número(s)* del producto que deseas ordenar.\n\n💡 Puedes seleccionar varios productos separados por comas (ej: 1, 3, 5)\n\n💡 También puedes escribir *cancelar* para salir.';
 
   await whatsappService.sendTextMessage(phoneNumber, message);
   updateSession(phoneNumber, { 
@@ -367,15 +368,23 @@ async function handlePedirProducto(phoneNumber, message) {
   const session = getSession(phoneNumber);
   const { productos } = session.data;
 
-  const productoIndex = parseInt(message) - 1;
+  // Permitir múltiples productos separados por comas
+  const numeros = message.split(',').map(n => n.trim());
+  const productosSeleccionados = [];
 
-  if (isNaN(productoIndex) || productoIndex < 0 || productoIndex >= productos.length) {
-    await whatsappService.sendTextMessage(phoneNumber, 
-      '❌ Número inválido. Por favor elige un número de la lista de productos.');
-    return;
+  for (const num of numeros) {
+    const productoIndex = parseInt(num) - 1;
+    
+    if (isNaN(productoIndex) || productoIndex < 0 || productoIndex >= productos.length) {
+      await whatsappService.sendTextMessage(phoneNumber, 
+        `❌ El número "${num}" no es válido. Por favor elige números de la lista de productos.`);
+      return;
+    }
+    
+    productosSeleccionados.push(productos[productoIndex]);
   }
 
-  const producto = productos[productoIndex];
+  const producto = productosSeleccionados[0];
   
   await whatsappService.sendTextMessage(phoneNumber, 
     `✅ Seleccionaste: *${producto.nombre}* ($${producto.precio.toFixed(2)})\n\n` +
@@ -454,13 +463,16 @@ async function solicitarNombre(phoneNumber) {
 async function handlePedirNombre(phoneNumber, message) {
   const session = getSession(phoneNumber);
   session.data.nombre = message;
+  session.data.tipoEntrega = 'Recoger en restaurante';
 
   await whatsappService.sendTextMessage(phoneNumber, 
-    `Gracias ${message}! 📍\n\n` +
-    `Ahora dime tu dirección de entrega:`
+    `Gracias ${message}! 🏪\n\n` +
+    `Tu pedido será para: *Recoger en restaurante* 📍\n\n` +
+    `¿Tienes alguna nota adicional para tu pedido? (Ej: Sin cebolla, extra picante, etc.)\n\n` +
+    `O escribe *no* si no tienes notas.`
   );
   
-  updateSession(phoneNumber, { step: 'pedir_direccion' });
+  updateSession(phoneNumber, { step: 'pedir_notas' });
 }
 
 /**
@@ -496,7 +508,7 @@ async function handlePedirNotas(phoneNumber, message) {
  */
 async function mostrarResumenPedido(phoneNumber) {
   const session = getSession(phoneNumber);
-  const { carrito, nombre, direccion, notas } = session.data;
+  const { carrito, nombre, tipoEntrega, notas } = session.data;
 
   let total = 0;
   let resumen = '📋 *Resumen de tu Pedido*\n\n';
@@ -505,12 +517,14 @@ async function mostrarResumenPedido(phoneNumber) {
   carrito.forEach(item => {
     const subtotal = item.precio * item.cantidad;
     total += subtotal;
-    resumen += `  • ${item.cantidad}x ${item.nombre} - $${subtotal.toFixed(2)}\n`;
+    const precioFormat = subtotal % 1 === 0 ? subtotal : subtotal.toFixed(2);
+    resumen += `  • ${item.cantidad}x ${item.nombre} - $${precioFormat} MXN\n`;
   });
 
-  resumen += `\n💰 *Total: $${total.toFixed(2)}*\n\n`;
+  const totalFormat = total % 1 === 0 ? total : total.toFixed(2);
+  resumen += `\n💰 *Total: $${totalFormat} MXN*\n\n`;
   resumen += `👤 *Nombre:* ${nombre}\n`;
-  resumen += `📍 *Dirección:* ${direccion}\n`;
+  resumen += `📍 *Tipo de entrega:* ${tipoEntrega}\n`;
   
   if (notas) {
     resumen += `📝 *Notas:* ${notas}\n`;
@@ -545,7 +559,7 @@ async function handleConfirmarPedido(phoneNumber, message) {
 async function procesarPedido(phoneNumber) {
   try {
     const session = getSession(phoneNumber);
-    const { carrito, nombre, direccion, notas } = session.data;
+    const { carrito, nombre, tipoEntrega, notas } = session.data;
 
     // Obtener o crear cliente
     const cliente = await supabaseService.getOrCreateCliente(phoneNumber, nombre);
@@ -558,7 +572,7 @@ async function procesarPedido(phoneNumber) {
     const pedido = await supabaseService.createPedido(
       cliente.id,
       carrito,
-      direccion,
+      tipoEntrega,
       notas
     );
 
