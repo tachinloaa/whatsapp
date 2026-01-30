@@ -14,8 +14,9 @@ const client = twilio(config.twilio.accountSid, config.twilio.authToken);
  */
 async function sendTextMessage(to, message) {
   try {
-    // Twilio requiere formato whatsapp:+número
-    const formattedTo = to.startsWith('whatsapp:') ? to : `whatsapp:+${to}`;
+    // Limpiar y formatear el número correctamente
+    let formattedTo = to.replace('whatsapp:', '').replace('+', '');
+    formattedTo = `whatsapp:+${formattedTo}`;
     
     const response = await client.messages.create({
       body: message,
@@ -23,7 +24,7 @@ async function sendTextMessage(to, message) {
       to: formattedTo
     });
 
-    console.log(`✅ Mensaje enviado a ${to} - SID: ${response.sid}`);
+    console.log(`✅ Mensaje enviado a ${formattedTo} - SID: ${response.sid}`);
     return response;
   } catch (error) {
     console.error('❌ Error al enviar mensaje:', error.message);
