@@ -101,8 +101,7 @@ async function getOrCreateCliente(telefono, nombre = null) {
         .insert([
           {
             telefono: telefono,
-            nombre: nombre || 'Cliente',
-            activo: true
+            nombre: nombre || 'Cliente'
           }
         ])
         .select()
