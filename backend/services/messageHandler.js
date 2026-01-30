@@ -282,7 +282,8 @@ async function showAllProductos(phoneNumber) {
   Object.keys(categorias).forEach(catNombre => {
     message += `📂 *${catNombre}*\n`;
     categorias[catNombre].forEach(prod => {
-      message += `  • ${prod.nombre} - $${prod.precio.toFixed(2)}\n`;
+      const precio = prod.precio % 1 === 0 ? prod.precio : prod.precio.toFixed(2);
+      message += `  • ${prod.nombre} - $${precio} MXN\n`;
       if (prod.descripcion) {
         message += `    _${prod.descripcion}_\n`;
       }
@@ -311,7 +312,8 @@ async function showProductosByCategoria(phoneNumber, categoria) {
 
   let message = `🍽️ *${categoria.nombre}*\n\n`;
   productos.forEach((prod, index) => {
-    message += `${index + 1}. *${prod.nombre}* - $${prod.precio.toFixed(2)}\n`;
+    const precio = prod.precio % 1 === 0 ? prod.precio : prod.precio.toFixed(2);
+    message += `${index + 1}. *${prod.nombre}* - $${precio} MXN\n`;
     if (prod.descripcion) {
       message += `   _${prod.descripcion}_\n`;
     }
