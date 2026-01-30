@@ -174,9 +174,9 @@ async function handleInicioStep(phoneNumber, message) {
  * Manejar menú principal
  */
 async function handleMenuPrincipal(phoneNumber, message) {
-  if (message.includes('menu') || message.includes('menú') || message.includes('producto')) {
+  if (message.includes('menu') || message.includes('menú') || message.includes('producto') || message === '1') {
     await showCategorias(phoneNumber);
-  } else if (message.includes('pedir') || message.includes('pedido') || message.includes('comprar')) {
+  } else if (message.includes('pedir') || message.includes('pedido') || message.includes('comprar') || message === '2') {
     await iniciarPedido(phoneNumber);
   } else if (message.includes('contacto')) {
     await whatsappService.sendTextMessage(phoneNumber, 
